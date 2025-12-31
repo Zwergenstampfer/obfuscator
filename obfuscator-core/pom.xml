@@ -13,6 +13,7 @@
          xmlns="http://maven.apache.org/POM/4.0.0"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
+
     <parent>
         <groupId>me.superblaubeere27</groupId>
         <artifactId>obfuscator</artifactId>
@@ -31,22 +32,29 @@
             <url>file://${parent.basedir}/libs</url>
         </repository>
     </repositories>
+
     <properties>
-        <lombok.version>1.18.16</lombok.version>
-        <slf4j-api.version>1.7.30</slf4j-api.version>
-        <logback-classic.version>1.2.3</logback-classic.version>
-        <guava.version>29.0-jre</guava.version>
-        <rsyntaxtextarea.version>2.6.1</rsyntaxtextarea.version>
-        <jopt-simple.version>5.0.4</jopt-simple.version>
-        <gson.version>2.8.2</gson.version>
+        <!-- Make sure your installed JDK matches this -->
+        <maven.compiler.release>24</maven.compiler.release>
+
+        <!-- Library versions -->
+        <lombok.version>1.18.42</lombok.version>
+        <slf4j-api.version>2.0.16</slf4j-api.version>
+        <logback-classic.version>1.5.20</logback-classic.version>
+        <guava.version>33.5.0-jre</guava.version>
+        <rsyntaxtextarea.version>3.6.0</rsyntaxtextarea.version>
+        <jopt-simple.version>6.0-alpha-3</jopt-simple.version>
+        <gson.version>2.11.0</gson.version>
         <forms_rt.version>7.0.3</forms_rt.version>
-        <junit.version>4.13.1</junit.version>
-        <maven-shade-plugin.version>3.2.4</maven-shade-plugin.version>
-        <maven-jar-plugin.version>3.2.0</maven-jar-plugin.version>
-        <jcp.version>6.1.4</jcp.version>
-        <commons-lang3.version>3.11</commons-lang3.version>
-        <nashorn.version>15.2</nashorn.version>
-        <flatlaf.version>2.1</flatlaf.version>
+        <junit.version>4.13.2</junit.version>
+        <maven-shade-plugin.version>3.6.1</maven-shade-plugin.version>
+        <maven-jar-plugin.version>3.4.2</maven-jar-plugin.version>
+        <maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version>
+        <build-helper-maven-plugin.version>3.6.0</build-helper-maven-plugin.version>
+        <jcp.version>7.3.0</jcp.version>
+        <commons-lang3.version>3.19.0</commons-lang3.version>
+        <nashorn.version>15.7</nashorn.version>
+        <flatlaf.version>3.6.2</flatlaf.version>
     </properties>
 
     <dependencies>
@@ -91,7 +99,7 @@
             <artifactId>asm-analysis</artifactId>
             <version>${asm.version}</version>
         </dependency>
-        <!-- https://mvnrepository.com/artifact/com.google.guava/guava -->
+
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
@@ -113,7 +121,6 @@
             <artifactId>rsyntaxtextarea</artifactId>
             <version>${rsyntaxtextarea.version}</version>
         </dependency>
-        <!-- https://mvnrepository.com/artifact/biz.aQute/bndlib -->
 
         <dependency>
             <groupId>net.sf.jopt-simple</groupId>
@@ -131,6 +138,7 @@
             <artifactId>forms_rt</artifactId>
             <version>${forms_rt.version}</version>
         </dependency>
+
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
@@ -165,6 +173,72 @@
 
     <build>
         <plugins>
+            <!-- Make javac consistent & wire Lombok as AP -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>${maven-compiler-plugin.version}</version>
+                <configuration>
+                    <release>${maven.compiler.release}</release>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>${lombok.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
+
+            <!-- JCP 7.x: preprocess with vars; no 'clear' goal -->
+            <plugin>
+                <groupId>com.igormaznitsa</groupId>
+                <artifactId>jcp</artifactId>
+                <version>${jcp.version}</version>
+                <executions>
+                    <execution>
+                        <id>preprocessSources</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>preprocess</goal>
+                        </goals>
+                        <configuration>
+                            <sources>
+                                <source>${project.basedir}/src/main/java</source>
+                            </sources>
+                            <target>${project.build.directory}/generated-sources/preprocessed</target>
+                            <allowBlocks>true</allowBlocks>
+                            <!-- case-sensitive: matches 'buildtype' used in sources -->
+                            <vars>
+                                <buildtype>gui</buildtype>
+                            </vars>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Make Maven compile the preprocessed output -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>${build-helper-maven-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <id>add-preprocessed</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>add-source</goal>
+                        </goals>
+                        <configuration>
+                            <sources>
+                                <source>${project.build.directory}/generated-sources/preprocessed</source>
+                            </sources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Create runnable fat JAR with Main-Class -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
@@ -176,9 +250,10 @@
                             <goal>shade</goal>
                         </goals>
                         <configuration>
+                            <shadedArtifactAttached>true</shadedArtifactAttached>
+                            <shadedClassifierName>shaded</shadedClassifierName>
                             <transformers>
-                                <transformer
-                                        implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                                     <mainClass>me.superblaubeere27.jobf.JObf</mainClass>
                                 </transformer>
                             </transformers>
@@ -186,6 +261,8 @@
                     </execution>
                 </executions>
             </plugin>
+
+            <!-- Keep your plain (non-shaded) jar too -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
@@ -199,33 +276,16 @@
                     </archive>
                 </configuration>
             </plugin>
+
             <plugin>
-                <groupId>com.igormaznitsa</groupId>
-                <artifactId>jcp</artifactId>
-                <version>${jcp.version}</version>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.2.5</version>
                 <configuration>
-                    <globalVars>
-                        <property>
-                            <name>buildType</name>
-                            <value>gui</value> <!--headless or gui-->
-                        </property>
-                    </globalVars>
+                    <argLine>
+                        --add-opens java.base/java.lang=ALL-UNNAMED
+                    </argLine>
                 </configuration>
-                <executions>
-                    <execution>
-                        <id>preprocessSources</id>
-                        <phase>generate-sources</phase>
-                        <goals>
-                            <goal>preprocess</goal>
-                        </goals>
-                    </execution>
-                    <execution>
-                        <id>clearGeneratedFolders</id>
-                        <goals>
-                            <goal>clear</goal>
-                        </goals>
-                    </execution>
-                </executions>
             </plugin>
         </plugins>
     </build>

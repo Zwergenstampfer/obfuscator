@@ -10,8 +10,6 @@
 
 package me.superblaubeere27.jobf.utils.values;
 
-import joptsimple.internal.Strings;
-
 public class ModeValue extends Value<Integer> {
     private String[] possibleValues;
 
@@ -33,6 +31,6 @@ public class ModeValue extends Value<Integer> {
 
     @Override
     public String toString() {
-        return String.format("%s::%s<%s> = %s", getOwner(), getName(), Strings.join(getPossibleValues(), ", "), getObject());
+        return String.format("%s::%s<%s> = %s", getOwner(), getName(), String.join(", ", possibleValues), getObject());
     }
 }
